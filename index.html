@@ -3,32 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta de Premios</title>
+    <title>Ruleta LIS</title>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 20px; }
+        body { font-family: 'Arial', sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #1a1a1a; color: white; padding: 20px; }
         .container { position: relative; width: 320px; display: flex; flex-direction: column; align-items: center; }
-        #canvas { border: 5px solid #333; border-radius: 50%; width: 300px; height: 300px; margin-top: 20px; }
-        .pointer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 30px solid #e74c3c; z-index: 10; }
-        button { margin-top: 20px; padding: 15px 30px; font-size: 18px; font-weight: bold; color: white; background-color: #27ae60; border: none; border-radius: 25px; cursor: pointer; width: 100%; }
-        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
-        #result-container { margin-top: 20px; text-align: center; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none; width: 100%; }
-        .code-box { font-size: 22px; font-weight: bold; color: #2980b9; letter-spacing: 3px; margin-top: 10px; padding: 10px; border: 2px dashed #2980b9; background: #eef2f7; }
-        .msg-bloqueo { color: #c0392b; font-weight: bold; margin-top: 10px; display: none; }
+        
+        /* Flecha indicadora corregida */
+        .pointer { 
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%); 
+            width: 0; height: 0; 
+            border-left: 15px solid transparent; border-right: 15px solid transparent; 
+            border-top: 30px solid #ff4757; z-index: 100; 
+        }
+
+        canvas { border: 8px solid #333; border-radius: 50%; background: #222; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        
+        button { 
+            margin-top: 25px; padding: 15px 40px; font-size: 20px; font-weight: bold; 
+            color: white; background: #27ae60; border: none; border-radius: 50px; 
+            cursor: pointer; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+        }
+        
+        button:disabled { background: #555; box-shadow: none; cursor: not-allowed; }
+
+        #result-container { 
+            margin-top: 20px; text-align: center; padding: 20px; 
+            background: white; color: #333; border-radius: 15px; width: 100%; display: none; 
+        }
+        
+        .code-box { 
+            font-size: 28px; font-weight: bold; color: #2980b9; 
+            border: 3px dashed #2980b9; margin-top: 10px; padding: 10px; background: #f9f9f9;
+        }
+
+        .blocked-msg { color: #ff4757; font-weight: bold; margin-top: 15px; display: none; text-align: center; }
     </style>
 </head>
 <body>
 
-    <h1>Ruleta de Premios</h1>
+    <h2 style="margin-bottom: 5px;">¡Gira y Gana!</h2>
+    <p style="color: #aaa; margin-top: 0;">Exclusivo para clientes</p>
     
     <div class="container">
         <div class="pointer"></div>
         <canvas id="canvas" width="300" height="300"></canvas>
-        <button id="spin-button" onclick="spin()">¡GIRAR!</button>
-        <p id="bloqueo-texto" class="msg-bloqueo">Ya has utilizado tu intento de hoy.</p>
+        <button id="spin-button" onclick="spin()">GIRAR RUEDA</button>
+        <p id="bloqueo-texto" class="blocked-msg">⚠️ Ya utilizaste tu intento. <br> Muestra tu código en caja.</p>
 
         <div id="result-container">
-            <h2 id="win-text"></h2>
-            <p>Toma captura de pantalla y envíala por WhatsApp</p>
+            <h3 id="win-text" style="margin: 0;"></h3>
+            <p style="font-size: 14px; margin: 10px 0;">Toma captura de pantalla y envíala por WhatsApp</p>
             <div id="unique-code" class="code-box"></div>
         </div>
     </div>
@@ -47,14 +71,12 @@
         let currentRotation = 0;
         let isSpinning = false;
 
-        // --- LÓGICA DE BLOQUEO ---
-        // Al cargar la página, revisamos si ya hay un premio guardado en la memoria del navegador
+        // Cargar estado guardado
         window.onload = () => {
-            const premioGuardado = localStorage.getItem('premioRuleta');
-            const codigoGuardado = localStorage.getItem('codigoRuleta');
-            
-            if (premioGuardado && premioGuardado !== "Intenta de nuevo") {
-                mostrarResultado(premioGuardado, codigoGuardado);
+            const savedPrize = localStorage.getItem('premio_v1');
+            const savedCode = localStorage.getItem('codigo_v1');
+            if (savedPrize) {
+                mostrarResultado(savedPrize, savedCode);
                 desactivarJuego();
             }
         };
@@ -67,13 +89,14 @@
                 ctx.moveTo(150, 150);
                 ctx.arc(150, 150, 150, i * arc, (i + 1) * arc);
                 ctx.fill();
+                
                 ctx.save();
                 ctx.translate(150, 150);
                 ctx.rotate(i * arc + arc / 2);
                 ctx.fillStyle = "white";
-                ctx.font = "bold 14px Arial";
+                ctx.font = "bold 16px Arial";
                 ctx.textAlign = "right";
-                ctx.fillText(options[i], 140, 5);
+                ctx.fillText(options[i], 135, 8);
                 ctx.restore();
             }
         }
@@ -83,44 +106,45 @@
             if (isSpinning) return;
             isSpinning = true;
             spinBtn.disabled = true;
+            resultContainer.style.display = "none";
 
-            const extraDegrees = Math.floor(Math.random() * 360) + 1800; 
-            currentRotation += extraDegrees;
+            // Rotación aleatoria (mínimo 5 vueltas)
+            const randomSpin = Math.floor(Math.random() * 360) + 1800;
+            currentRotation += randomSpin;
             
             canvas.style.transition = "transform 4s cubic-bezier(0.15, 0, 0.15, 1)";
             canvas.style.transform = `rotate(${currentRotation}deg)`;
 
             setTimeout(() => {
                 isSpinning = false;
-                calculatePrize();
+                
+                // CÁLCULO CORREGIDO:
+                // 1. Obtenemos los grados actuales (0-360)
+                // 2. Ajustamos para que el 0 sea la parte superior (restar 90 o sumar 270)
+                const actualDegrees = currentRotation % 360;
+                const arcSize = 360 / options.length;
+                
+                // Esta fórmula detecta qué sección está bajo la flecha (arriba)
+                const index = Math.floor((360 - actualDegrees + 270) % 360 / arcSize);
+                const prize = options[index];
+
+                if (prize === "Intenta de nuevo") {
+                    winText.innerText = "¡Casi! Tienes un intento extra.";
+                    resultContainer.style.display = "block";
+                    codeDisplay.innerText = "Vuelve a girar";
+                    spinBtn.disabled = false;
+                } else {
+                    const uniqueId = "LIS-" + Math.floor(1000 + Math.random() * 9000);
+                    localStorage.setItem('premio_v1', prize);
+                    localStorage.setItem('codigo_v1', uniqueId);
+                    mostrarResultado(prize, uniqueId);
+                    desactivarJuego();
+                }
             }, 4000);
         }
 
-        function calculatePrize() {
-            const actualDeg = currentRotation % 360;
-            const arc = 360 / options.length;
-            const index = Math.floor((360 - (actualDeg % 360) + 270) % 360 / arc);
-            const prize = options[index];
-
-            if (prize === "Intenta de nuevo") {
-                winText.innerText = "¡Casi! Tienes un intento más.";
-                codeDisplay.innerText = "Vuelve a girar";
-                resultContainer.style.display = "block";
-                spinBtn.disabled = false;
-            } else {
-                const uniqueId = Math.floor(1000 + Math.random() * 9000) + "-L";
-                
-                // GUARDAR EN MEMORIA DEL CELULAR
-                localStorage.setItem('premioRuleta', prize);
-                localStorage.setItem('codigoRuleta', uniqueId);
-                
-                mostrarResultado(prize, uniqueId);
-                desactivarJuego();
-            }
-        }
-
         function mostrarResultado(prize, code) {
-            winText.innerText = "Ganaste: " + prize;
+            winText.innerText = "¡Ganaste: " + prize + "!";
             codeDisplay.innerText = code;
             resultContainer.style.display = "block";
         }
@@ -128,125 +152,6 @@
         function desactivarJuego() {
             spinBtn.style.display = "none";
             bloqueoTexto.style.display = "block";
-        }
-    </script>
-</body>
-</html>
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: none;
-        }
-
-        .code-box {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2980b9;
-            letter-spacing: 5px;
-            margin-top: 10px;
-            padding: 10px;
-            border: 2px dashed #2980b9;
-        }
-    </style>
-</head>
-<body>
-
-    <h1>¡Gira y Gana!</h1>
-    
-    <div class="container">
-        <div class="pointer"></div>
-        <canvas id="canvas" width="300" height="300"></canvas>
-        <button id="spin-button" onclick="spin()">¡GIRAR AHORA!</button>
-
-        <div id="result-container">
-            <h2 id="win-text"></h2>
-            <p>Toma una captura de pantalla y envíala por WhatsApp</p>
-            <div id="unique-code" class="code-box"></div>
-        </div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const spinBtn = document.getElementById('spin-button');
-        const resultContainer = document.getElementById('result-container');
-        const winText = document.getElementById('win-text');
-        const codeDisplay = document.getElementById('unique-code');
-
-        const options = ["10 Córdoba", "5%", "Regalía", "Membresía", "Intenta de nuevo"];
-        const colors = ["#f1c40f", "#e67e22", "#9b59b6", "#3498db", "#e74c3c"];
-        
-        let currentRotation = 0;
-        let isSpinning = false;
-        let hasWon = false; // Controla si ya ganó algo definitivo
-
-        // Dibujar la ruleta
-        function drawWheel() {
-            const arc = (2 * Math.PI) / options.length;
-            for (let i = 0; i < options.length; i++) {
-                ctx.beginPath();
-                ctx.fillStyle = colors[i];
-                ctx.moveTo(150, 150);
-                ctx.arc(150, 150, 150, i * arc, (i + 1) * arc);
-                ctx.fill();
-                ctx.save();
-                
-                // Texto
-                ctx.translate(150, 150);
-                ctx.rotate(i * arc + arc / 2);
-                ctx.fillStyle = "white";
-                ctx.font = "bold 14px Arial";
-                ctx.textAlign = "right";
-                ctx.fillText(options[i], 140, 5);
-                ctx.restore();
-            }
-        }
-
-        drawWheel();
-
-        function spin() {
-            if (isSpinning) return;
-
-            isSpinning = true;
-            resultContainer.style.display = "none";
-            spinBtn.disabled = true;
-
-            const extraDegrees = Math.floor(Math.random() * 360) + 1440; // Mínimo 4 vueltas
-            currentRotation += extraDegrees;
-            
-            canvas.style.transition = "transform 4s cubic-bezier(0.15, 0, 0.15, 1)";
-            canvas.style.transform = `rotate(${currentRotation}deg)`;
-
-            setTimeout(() => {
-                isSpinning = false;
-                calculatePrize();
-            }, 4000);
-        }
-
-        function calculatePrize() {
-            const actualDeg = currentRotation % 360;
-            const arc = 360 / options.length;
-            // El puntero está arriba (270 grados en el círculo trigonométrico)
-            const index = Math.floor((360 - (actualDeg % 360) + 270) % 360 / arc);
-            const prize = options[index];
-
-            if (prize === "Intenta de nuevo") {
-                winText.innerText = "¡Casi! Intenta una vez más.";
-                winText.style.color = "#e74c3c";
-                codeDisplay.innerText = "----";
-                resultContainer.style.display = "block";
-                spinBtn.disabled = false; // Permitir girar de nuevo
-            } else {
-                winText.innerText = "¡Felicidades! Ganaste: " + prize;
-                winText.style.color = "#27ae60";
-                
-                // Generar código único de 4 dígitos + Letra para evitar falsificaciones simples
-                const uniqueId = Math.floor(1000 + Math.random() * 9000);
-                const randomLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-                codeDisplay.innerText = `${uniqueId}-${randomLetter}`;
-                
-                resultContainer.style.display = "block";
-                spinBtn.disabled = true; // Bloquear permanentemente tras ganar
-                hasWon = true;
-            }
         }
     </script>
 </body>
