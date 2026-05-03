@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta LIS</title>
+    <title>Ruleta de Premios LIS</title>
     <style>
         body { font-family: 'Arial', sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #1a1a1a; color: white; padding: 20px; }
         .container { position: relative; width: 320px; display: flex; flex-direction: column; align-items: center; }
         
-        /* Flecha indicadora corregida */
         .pointer { 
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%); 
             width: 0; height: 0; 
@@ -22,6 +21,7 @@
             margin-top: 25px; padding: 15px 40px; font-size: 20px; font-weight: bold; 
             color: white; background: #27ae60; border: none; border-radius: 50px; 
             cursor: pointer; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+            width: 100%;
         }
         
         button:disabled { background: #555; box-shadow: none; cursor: not-allowed; }
@@ -29,8 +29,11 @@
         #result-container { 
             margin-top: 20px; text-align: center; padding: 20px; 
             background: white; color: #333; border-radius: 15px; width: 100%; display: none; 
+            box-sizing: border-box;
         }
         
+        .prize-detail { font-size: 16px; color: #555; margin: 10px 0; font-weight: bold; }
+
         .code-box { 
             font-size: 28px; font-weight: bold; color: #2980b9; 
             border: 3px dashed #2980b9; margin-top: 10px; padding: 10px; background: #f9f9f9;
@@ -42,17 +45,18 @@
 <body>
 
     <h2 style="margin-bottom: 5px;">¡Gira y Gana!</h2>
-    <p style="color: #aaa; margin-top: 0;">Exclusivo para clientes</p>
+    <p style="color: #aaa; margin-top: 0; margin-bottom: 20px;">LisLaundry & Boutique</p>
     
     <div class="container">
         <div class="pointer"></div>
         <canvas id="canvas" width="300" height="300"></canvas>
         <button id="spin-button" onclick="spin()">GIRAR RUEDA</button>
-        <p id="bloqueo-texto" class="blocked-msg">⚠️ Ya utilizaste tu intento. <br> Muestra tu código en caja.</p>
+        <p id="bloqueo-texto" class="blocked-msg">⚠️ Ya utilizaste tu intento.<br>Presenta tu captura en caja.</p>
 
         <div id="result-container">
-            <h3 id="win-text" style="margin: 0;"></h3>
-            <p style="font-size: 14px; margin: 10px 0;">Toma captura de pantalla y envíala por WhatsApp</p>
+            <h3 id="win-text" style="margin: 0; color: #27ae60;"></h3>
+            <p id="win-description" class="prize-detail"></p>
+            <p style="font-size: 13px; color: #888; margin: 5px 0;">Toma captura de pantalla completa</p>
             <div id="unique-code" class="code-box"></div>
         </div>
     </div>
@@ -63,18 +67,27 @@
         const spinBtn = document.getElementById('spin-button');
         const resultContainer = document.getElementById('result-container');
         const winText = document.getElementById('win-text');
+        const winDesc = document.getElementById('win-description');
         const codeDisplay = document.getElementById('unique-code');
         const bloqueoTexto = document.getElementById('bloqueo-texto');
 
-        const options = ["10 Córdoba", "5%", "Regalía", "Membresía", "Intenta de nuevo"];
-        const colors = ["#f1c40f", "#e67e22", "#9b59b6", "#3498db", "#e74c3c"];
+        // Configuración de premios y descripciones
+        const options = ["5 Córdoba", "10 Córdoba", "Membresía", "Intenta de nuevo", "Regalía"];
+        const descriptions = {
+            "5 Córdoba": "Recibe un descuento de 5 Córdoba (Compra mínima C$150)",
+            "10 Córdoba": "Recibe un descuento de 10 Córdoba (Compra mínima C$150)",
+            "Membresía": "Membresía de una semana",
+            "Intenta de nuevo": "¡Casi! Vuelve a intentarlo ahora mismo.",
+            "Regalía": "Pide tu regalía en caja"
+        };
+        const colors = ["#f1c40f", "#e67e22", "#9b59b6", "#e74c3c", "#3498db"];
+        
         let currentRotation = 0;
         let isSpinning = false;
 
-        // Cargar estado guardado
         window.onload = () => {
-            const savedPrize = localStorage.getItem('premio_v1');
-            const savedCode = localStorage.getItem('codigo_v1');
+            const savedPrize = localStorage.getItem('lis_prize_v2');
+            const savedCode = localStorage.getItem('lis_code_v2');
             if (savedPrize) {
                 mostrarResultado(savedPrize, savedCode);
                 desactivarJuego();
@@ -94,9 +107,9 @@
                 ctx.translate(150, 150);
                 ctx.rotate(i * arc + arc / 2);
                 ctx.fillStyle = "white";
-                ctx.font = "bold 16px Arial";
+                ctx.font = "bold 14px Arial";
                 ctx.textAlign = "right";
-                ctx.fillText(options[i], 135, 8);
+                ctx.fillText(options[i], 140, 5);
                 ctx.restore();
             }
         }
@@ -108,8 +121,7 @@
             spinBtn.disabled = true;
             resultContainer.style.display = "none";
 
-            // Rotación aleatoria (mínimo 5 vueltas)
-            const randomSpin = Math.floor(Math.random() * 360) + 1800;
+            const randomSpin = Math.floor(Math.random() * 360) + 2160; // 6 vueltas mínimas
             currentRotation += randomSpin;
             
             canvas.style.transition = "transform 4s cubic-bezier(0.15, 0, 0.15, 1)";
@@ -117,26 +129,21 @@
 
             setTimeout(() => {
                 isSpinning = false;
-                
-                // CÁLCULO CORREGIDO:
-                // 1. Obtenemos los grados actuales (0-360)
-                // 2. Ajustamos para que el 0 sea la parte superior (restar 90 o sumar 270)
                 const actualDegrees = currentRotation % 360;
                 const arcSize = 360 / options.length;
-                
-                // Esta fórmula detecta qué sección está bajo la flecha (arriba)
                 const index = Math.floor((360 - actualDegrees + 270) % 360 / arcSize);
                 const prize = options[index];
 
                 if (prize === "Intenta de nuevo") {
-                    winText.innerText = "¡Casi! Tienes un intento extra.";
+                    winText.innerText = "¡Sigue intentando!";
+                    winDesc.innerText = descriptions[prize];
+                    codeDisplay.innerText = "---";
                     resultContainer.style.display = "block";
-                    codeDisplay.innerText = "Vuelve a girar";
                     spinBtn.disabled = false;
                 } else {
                     const uniqueId = "LIS-" + Math.floor(1000 + Math.random() * 9000);
-                    localStorage.setItem('premio_v1', prize);
-                    localStorage.setItem('codigo_v1', uniqueId);
+                    localStorage.setItem('lis_prize_v2', prize);
+                    localStorage.setItem('lis_code_v2', uniqueId);
                     mostrarResultado(prize, uniqueId);
                     desactivarJuego();
                 }
@@ -144,7 +151,8 @@
         }
 
         function mostrarResultado(prize, code) {
-            winText.innerText = "¡Ganaste: " + prize + "!";
+            winText.innerText = "¡GANASTE " + prize.toUpperCase() + "!";
+            winDesc.innerText = descriptions[prize];
             codeDisplay.innerText = code;
             resultContainer.style.display = "block";
         }
