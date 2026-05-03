@@ -7,89 +7,77 @@
     <style>
         body { font-family: 'Arial', sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #1a1a1a; color: white; padding: 20px; }
         .container { position: relative; width: 320px; display: flex; flex-direction: column; align-items: center; }
-        
-        .pointer { 
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%); 
-            width: 0; height: 0; 
-            border-left: 15px solid transparent; border-right: 15px solid transparent; 
-            border-top: 30px solid #ff4757; z-index: 100; 
-        }
-
-        canvas { border: 8px solid #333; border-radius: 50%; background: #222; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        
-        button { 
-            margin-top: 25px; padding: 15px 40px; font-size: 20px; font-weight: bold; 
-            color: white; background: #27ae60; border: none; border-radius: 50px; 
-            cursor: pointer; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
-            width: 100%;
-        }
-        
-        button:disabled { background: #555; box-shadow: none; cursor: not-allowed; }
-
-        #result-container { 
-            margin-top: 20px; text-align: center; padding: 20px; 
-            background: white; color: #333; border-radius: 15px; width: 100%; display: none; 
-            box-sizing: border-box;
-        }
-        
-        .prize-detail { font-size: 16px; color: #555; margin: 10px 0; font-weight: bold; }
-
-        .code-box { 
-            font-size: 28px; font-weight: bold; color: #2980b9; 
-            border: 3px dashed #2980b9; margin-top: 10px; padding: 10px; background: #f9f9f9;
-        }
-
+        .pointer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 30px solid #ff4757; z-index: 100; }
+        canvas { border: 8px solid #333; border-radius: 50%; background: #222; box-shadow: 0 0 20px rgba(0,0,0,0.5); opacity: 0.5; transition: 0.5s; }
+        .reg-form { background: #2c2c2c; padding: 20px; border-radius: 15px; width: 100%; box-sizing: border-box; margin-bottom: 20px; border: 1px solid #444; }
+        input[type="text"] { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; background: #eee; color: #333; outline: none; }
+        button { margin-top: 15px; padding: 15px; font-size: 18px; font-weight: bold; color: white; background: #2980b9; border: none; border-radius: 50px; cursor: pointer; width: 100%; transition: 0.3s; }
+        button:disabled { background: #555 !important; cursor: not-allowed; opacity: 0.6; }
+        #result-container { margin-top: 20px; text-align: center; padding: 20px; background: white; color: #333; border-radius: 15px; width: 100%; display: none; box-sizing: border-box; }
+        .prize-detail { font-size: 14px; color: #555; margin: 10px 0; font-weight: bold; }
+        .code-box { font-size: 24px; font-weight: bold; color: #2980b9; border: 2px dashed #2980b9; margin: 10px 0; padding: 10px; background: #f9f9f9; }
         .blocked-msg { color: #ff4757; font-weight: bold; margin-top: 15px; display: none; text-align: center; }
+        .status-ready { color: #27ae60; font-size: 12px; font-weight: bold; display: none; }
     </style>
 </head>
 <body>
 
-    <h2 style="margin-bottom: 5px;">¡Gira y Gana!</h2>
+    <h2 style="margin-bottom: 5px;">¡Regístrate y Gana!</h2>
     <p style="color: #aaa; margin-top: 0; margin-bottom: 20px;">LisLaundry & Boutique</p>
     
+    <div id="registration-section" class="reg-form">
+        <label style="font-size: 14px; font-weight: bold;">Tu Nombre y Apellido:</label>
+        <input type="text" id="client-name" placeholder="Ej: Jainer Lopez" oninput="validarRegistro()">
+        <p id="status-msg" class="status-ready">✓ ¡Listo! Ya puedes girar la rueda.</p>
+    </div>
+
     <div class="container">
         <div class="pointer"></div>
         <canvas id="canvas" width="300" height="300"></canvas>
-        <button id="spin-button" onclick="spin()">GIRAR RUEDA</button>
-        <p id="bloqueo-texto" class="blocked-msg">⚠️ Ya utilizaste tu intento.<br>Presenta tu captura en caja.</p>
+        <button id="spin-button" onclick="spin()" disabled>GIRAR RUEDA</button>
+        <p id="bloqueo-texto" class="blocked-msg">⚠️ Ya participaste en esta dinámica.<br>Tu premio ya está registrado en el sistema.</p>
 
         <div id="result-container">
             <h3 id="win-text" style="margin: 0; color: #27ae60;"></h3>
             <p id="win-description" class="prize-detail"></p>
-            <p style="font-size: 13px; color: #888; margin: 5px 0;">Toma captura de pantalla completa</p>
+            <p style="font-size: 12px; margin-bottom: 5px;">Código de verificación:</p>
             <div id="unique-code" class="code-box"></div>
         </div>
     </div>
 
     <script>
+        const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycby2fUqIaG0BIdxzpgzjP54TcUfsUVw0Iwmut9CtEyfckfqRkiBh7I8fSRmBftz8qevEhA/exec';
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const spinBtn = document.getElementById('spin-button');
+        const regSection = document.getElementById('registration-section');
+        const inputNombre = document.getElementById('client-name');
+        const statusMsg = document.getElementById('status-msg');
         const resultContainer = document.getElementById('result-container');
         const winText = document.getElementById('win-text');
         const winDesc = document.getElementById('win-description');
         const codeDisplay = document.getElementById('unique-code');
         const bloqueoTexto = document.getElementById('bloqueo-texto');
 
-        // Configuración de premios y descripciones
         const options = ["5 Córdoba", "10 Córdoba", "Membresía", "Intenta de nuevo", "Regalía"];
         const descriptions = {
-            "5 Córdoba": "Recibe un descuento de 5 Córdoba (Compra mínima C$150)",
-            "10 Córdoba": "Recibe un descuento de 10 Córdoba (Compra mínima C$150)",
+            "5 Córdoba": "Descuento de C$5 (Compra mín. C$150)",
+            "10 Córdoba": "Descuento de C$10 (Compra mín. C$150)",
             "Membresía": "Membresía de una semana",
-            "Intenta de nuevo": "¡Casi! Vuelve a intentarlo ahora mismo.",
+            "Intenta de nuevo": "¡Casi! Tienes un giro más.",
             "Regalía": "Pide tu regalía en caja"
         };
         const colors = ["#f1c40f", "#e67e22", "#9b59b6", "#e74c3c", "#3498db"];
-        
         let currentRotation = 0;
         let isSpinning = false;
+        let nombreUsuario = "";
 
         window.onload = () => {
             const savedPrize = localStorage.getItem('lis_prize_v2');
-            const savedCode = localStorage.getItem('lis_code_v2');
             if (savedPrize) {
-                mostrarResultado(savedPrize, savedCode);
+                regSection.style.display = "none";
+                mostrarResultado(savedPrize, localStorage.getItem('lis_code_v2'));
                 desactivarJuego();
             }
         };
@@ -97,68 +85,84 @@
         function drawWheel() {
             const arc = (2 * Math.PI) / options.length;
             for (let i = 0; i < options.length; i++) {
-                ctx.beginPath();
-                ctx.fillStyle = colors[i];
-                ctx.moveTo(150, 150);
-                ctx.arc(150, 150, 150, i * arc, (i + 1) * arc);
-                ctx.fill();
-                
-                ctx.save();
-                ctx.translate(150, 150);
-                ctx.rotate(i * arc + arc / 2);
-                ctx.fillStyle = "white";
-                ctx.font = "bold 14px Arial";
-                ctx.textAlign = "right";
-                ctx.fillText(options[i], 140, 5);
-                ctx.restore();
+                ctx.beginPath(); ctx.fillStyle = colors[i]; ctx.moveTo(150, 150);
+                ctx.arc(150, 150, 150, i * arc, (i + 1) * arc); ctx.fill();
+                ctx.save(); ctx.translate(150, 150); ctx.rotate(i * arc + arc / 2);
+                ctx.fillStyle = "white"; ctx.font = "bold 14px Arial"; ctx.textAlign = "right";
+                ctx.fillText(options[i], 140, 5); ctx.restore();
             }
         }
         drawWheel();
+
+        function validarRegistro() {
+            const val = inputNombre.value.trim();
+            const tieneEspacio = val.includes(" ");
+            const longitudSuficiente = val.length > 5;
+
+            if (tieneEspacio && longitudSuficiente) {
+                nombreUsuario = val;
+                spinBtn.disabled = false;
+                spinBtn.style.background = "#27ae60";
+                canvas.style.opacity = "1";
+                statusMsg.style.display = "block";
+            } else {
+                spinBtn.disabled = true;
+                spinBtn.style.background = "#2980b9";
+                canvas.style.opacity = "0.5";
+                statusMsg.style.display = "none";
+            }
+        }
 
         function spin() {
             if (isSpinning) return;
             isSpinning = true;
             spinBtn.disabled = true;
+            inputNombre.disabled = true;
             resultContainer.style.display = "none";
-
-            const randomSpin = Math.floor(Math.random() * 360) + 2160; // 6 vueltas mínimas
-            currentRotation += randomSpin;
             
+            const randomSpin = Math.floor(Math.random() * 360) + 2160;
+            currentRotation += randomSpin;
             canvas.style.transition = "transform 4s cubic-bezier(0.15, 0, 0.15, 1)";
             canvas.style.transform = `rotate(${currentRotation}deg)`;
 
             setTimeout(() => {
                 isSpinning = false;
-                const actualDegrees = currentRotation % 360;
-                const arcSize = 360 / options.length;
-                const index = Math.floor((360 - actualDegrees + 270) % 360 / arcSize);
+                const index = Math.floor((360 - (currentRotation % 360) + 270) % 360 / (360 / options.length));
                 const prize = options[index];
 
                 if (prize === "Intenta de nuevo") {
                     winText.innerText = "¡Sigue intentando!";
                     winDesc.innerText = descriptions[prize];
-                    codeDisplay.innerText = "---";
                     resultContainer.style.display = "block";
                     spinBtn.disabled = false;
                 } else {
-                    const uniqueId = "LIS-" + Math.floor(1000 + Math.random() * 9000);
+                    const finalCode = "LIS-" + Math.floor(1000 + Math.random() * 9000);
+                    
+                    fetch(URL_SCRIPT, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify({ nombre: nombreUsuario, premio: prize, codigo: finalCode })
+                    });
+
                     localStorage.setItem('lis_prize_v2', prize);
-                    localStorage.setItem('lis_code_v2', uniqueId);
-                    mostrarResultado(prize, uniqueId);
+                    localStorage.setItem('lis_code_v2', finalCode);
+                    mostrarResultado(prize, finalCode);
                     desactivarJuego();
                 }
             }, 4000);
         }
 
         function mostrarResultado(prize, code) {
-            winText.innerText = "¡GANASTE " + prize.toUpperCase() + "!";
+            winText.innerText = "GANASTE: " + prize.toUpperCase();
             winDesc.innerText = descriptions[prize];
             codeDisplay.innerText = code;
             resultContainer.style.display = "block";
+            regSection.style.display = "none";
         }
 
         function desactivarJuego() {
             spinBtn.style.display = "none";
+            canvas.style.opacity = "0.5";
             bloqueoTexto.style.display = "block";
         }
     </script>
