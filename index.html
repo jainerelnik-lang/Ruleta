@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruleta de Premios</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 { color: #333; margin-bottom: 10px; }
+        
+        .container {
+            position: relative;
+            width: 350px;
+            height: 450px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #canvas {
+            border: 5px solid #333;
+            border-radius: 50%;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #e74c3c;
+            z-index: 10;
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background-color: #27ae60;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        #result-container {
+            margin-top: 25px;
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            width: 100%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .code-box {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2980b9;
+            letter-spacing: 5px;
+            margin-top: 10px;
+            padding: 10px;
+            border: 2px dashed #2980b9;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>¡Gira y Gana!</h1>
+    
+    <div class="container">
+        <div class="pointer"></div>
+        <canvas id="canvas" width="300" height="300"></canvas>
+        <button id="spin-button" onclick="spin()">¡GIRAR AHORA!</button>
+
+        <div id="result-container">
+            <h2 id="win-text"></h2>
+            <p>Toma una captura de pantalla y envíala por WhatsApp</p>
+            <div id="unique-code" class="code-box"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spin-button');
+        const resultContainer = document.getElementById('result-container');
+        const winText = document.getElementById('win-text');
+        const codeDisplay = document.getElementById('unique-code');
+
+        const options = ["10 Córdoba", "5%", "Regalía", "Membresía", "Intenta de nuevo"];
+        const colors = ["#f1c40f", "#e67e22", "#9b59b6", "#3498db", "#e74c3c"];
+        
+        let currentRotation = 0;
+        let isSpinning = false;
+        let hasWon = false; // Controla si ya ganó algo definitivo
+
+        // Dibujar la ruleta
+        function drawWheel() {
+            const arc = (2 * Math.PI) / options.length;
+            for (let i = 0; i < options.length; i++) {
+                ctx.beginPath();
+                ctx.fillStyle = colors[i];
+                ctx.moveTo(150, 150);
+                ctx.arc(150, 150, 150, i * arc, (i + 1) * arc);
+                ctx.fill();
+                ctx.save();
+                
+                // Texto
+                ctx.translate(150, 150);
+                ctx.rotate(i * arc + arc / 2);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 14px Arial";
+                ctx.textAlign = "right";
+                ctx.fillText(options[i], 140, 5);
+                ctx.restore();
+            }
+        }
+
+        drawWheel();
+
+        function spin() {
+            if (isSpinning) return;
+
+            isSpinning = true;
+            resultContainer.style.display = "none";
+            spinBtn.disabled = true;
+
+            const extraDegrees = Math.floor(Math.random() * 360) + 1440; // Mínimo 4 vueltas
+            currentRotation += extraDegrees;
+            
+            canvas.style.transition = "transform 4s cubic-bezier(0.15, 0, 0.15, 1)";
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                calculatePrize();
+            }, 4000);
+        }
+
+        function calculatePrize() {
+            const actualDeg = currentRotation % 360;
+            const arc = 360 / options.length;
+            // El puntero está arriba (270 grados en el círculo trigonométrico)
+            const index = Math.floor((360 - (actualDeg % 360) + 270) % 360 / arc);
+            const prize = options[index];
+
+            if (prize === "Intenta de nuevo") {
+                winText.innerText = "¡Casi! Intenta una vez más.";
+                winText.style.color = "#e74c3c";
+                codeDisplay.innerText = "----";
+                resultContainer.style.display = "block";
+                spinBtn.disabled = false; // Permitir girar de nuevo
+            } else {
+                winText.innerText = "¡Felicidades! Ganaste: " + prize;
+                winText.style.color = "#27ae60";
+                
+                // Generar código único de 4 dígitos + Letra para evitar falsificaciones simples
+                const uniqueId = Math.floor(1000 + Math.random() * 9000);
+                const randomLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+                codeDisplay.innerText = `${uniqueId}-${randomLetter}`;
+                
+                resultContainer.style.display = "block";
+                spinBtn.disabled = true; // Bloquear permanentemente tras ganar
+                hasWon = true;
+            }
+        }
+    </script>
+</body>
+</html>
