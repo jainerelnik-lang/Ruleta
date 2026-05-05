@@ -3,18 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta de Premios LIS</title>
+    <title>Ruleta de Premios RUT</title>
+    <!-- Librería de Confeti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body { font-family: 'Arial', sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #1a1a1a; color: white; padding: 20px; }
         .container { position: relative; width: 320px; display: flex; flex-direction: column; align-items: center; }
-        .pointer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 30px solid #ff4757; z-index: 100; }
-        canvas { border: 8px solid #333; border-radius: 50%; background: #222; box-shadow: 0 0 20px rgba(0,0,0,0.5); opacity: 0.5; transition: 0.5s; }
+        
+        .pointer { 
+            position: absolute; 
+            top: 150px; 
+            right: -15px; 
+            transform: translateY(-50%); 
+            width: 0; height: 0; 
+            border-top: 15px solid transparent; 
+            border-bottom: 15px solid transparent; 
+            border-right: 30px solid #ff4757; 
+            z-index: 100; 
+        }
+
+        canvas { border: 8px solid #333; border-radius: 50%; background: #222; box-shadow: 0 0 20px rgba(0,0,0,0.5); opacity: 0.5; transition: transform 5s cubic-bezier(0.15, 0, 0.15, 1); }
         .reg-form { background: #2c2c2c; padding: 20px; border-radius: 15px; width: 100%; box-sizing: border-box; margin-bottom: 20px; border: 1px solid #444; }
         input[type="text"] { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; background: #eee; color: #333; outline: none; }
         button { margin-top: 15px; padding: 15px; font-size: 18px; font-weight: bold; color: white; background: #2980b9; border: none; border-radius: 50px; cursor: pointer; width: 100%; transition: 0.3s; }
         button:disabled { background: #555 !important; cursor: not-allowed; opacity: 0.6; }
-        #result-container { margin-top: 20px; text-align: center; padding: 20px; background: white; color: #333; border-radius: 15px; width: 100%; display: none; box-sizing: border-box; }
-        .prize-detail { font-size: 14px; color: #555; margin: 10px 0; font-weight: bold; }
+        
+        #result-container { margin-top: 20px; text-align: center; padding: 20px; background: white; color: #333; border-radius: 15px; width: 100%; display: none; box-sizing: border-box; border: 2px solid #27ae60; animation: popIn 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.49); }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .prize-detail { font-size: 15px; color: #d35400; margin: 10px 0; font-weight: bold; line-height: 1.4; }
         .code-box { font-size: 24px; font-weight: bold; color: #2980b9; border: 2px dashed #2980b9; margin: 10px 0; padding: 10px; background: #f9f9f9; }
         .blocked-msg { color: #ff4757; font-weight: bold; margin-top: 15px; display: none; text-align: center; }
         .status-ready { color: #27ae60; font-size: 12px; font-weight: bold; display: none; }
@@ -38,9 +59,11 @@
         <p id="bloqueo-texto" class="blocked-msg">⚠️ Ya participaste en esta dinámica.<br>Tu premio ya está registrado en el sistema.</p>
 
         <div id="result-container">
-            <h3 id="win-text" style="margin: 0; color: #27ae60;"></h3>
-            <p id="win-description" class="prize-detail"></p>
-            <p style="font-size: 12px; margin-bottom: 5px;">Código de verificación:</p>
+            <h3 id="win-text" style="margin: 0; color: #27ae60; font-size: 22px;"></h3>
+            <div id="win-description" class="prize-detail"></div>
+            <p style="font-size: 11px; color: #7f8c8d;">📸 Toma una captura de pantalla completa</p>
+            <hr>
+            <p style="font-size: 12px; margin-bottom: 5px; font-weight: bold;">CÓDIGO DE VALIDACIÓN:</p>
             <div id="unique-code" class="code-box"></div>
         </div>
     </div>
@@ -60,24 +83,34 @@
         const codeDisplay = document.getElementById('unique-code');
         const bloqueoTexto = document.getElementById('bloqueo-texto');
 
-        const options = ["5 Córdoba", "10 Córdoba", "Membresía", "Intenta de nuevo", "Regalía"];
+        const options = [
+            "10 Cor", "20 Cor", "30 Cor", "Chilaquil", "Crema", 
+            "Perfume", "Auricular", "Café", "Vuelve a intentar", "Pato Punk"
+        ];
+
         const descriptions = {
-            "5 Córdoba": "Descuento de C$5 (Compra mín. C$150)",
-            "10 Córdoba": "Descuento de C$10 (Compra mín. C$150)",
-            "Membresía": "Membresía de una semana",
-            "Intenta de nuevo": "¡Casi! Tienes un giro más.",
-            "Regalía": "Pide tu regalía en caja"
+            "10 Cor": "Descuento de 10 Córdobas (Mín. C$300)",
+            "20 Cor": "Descuento de 20 Córdobas (Mín. C$450)",
+            "30 Cor": "Descuento de 30 Córdobas (Mín. C$600)",
+            "Chilaquil": "Chilaquil Gratis (Mín. C$500)",
+            "Crema": "Crema de regalo (Mín. C$500)",
+            "Perfume": "Perfume de regalo (Mín. C$450)",
+            "Auricular": "Auriculares de regalo (Mín. C$600)",
+            "Café": "Café de cortesía (Mín. C$300)",
+            "Vuelve a intentar": "¡Casi! Tienes un giro extra.",
+            "Pato Punk": "Moto Pato Punk de regalo (Mín. C$650)"
         };
-        const colors = ["#f1c40f", "#e67e22", "#9b59b6", "#e74c3c", "#3498db"];
+
+        const colors = ["#f1c40f", "#e67e22", "#9b59b6", "#3498db", "#2ecc71", "#1abc9c", "#e74c3c", "#d35400", "#7f8c8d", "#c0392b"];
         let currentRotation = 0;
         let isSpinning = false;
         let nombreUsuario = "";
 
         window.onload = () => {
-            const savedPrize = localStorage.getItem('lis_prize_v2');
+            const savedPrize = localStorage.getItem('lis_prize_v3');
             if (savedPrize) {
                 regSection.style.display = "none";
-                mostrarResultado(savedPrize, localStorage.getItem('lis_code_v2'));
+                mostrarResultado(savedPrize, localStorage.getItem('lis_code_v3'));
                 desactivarJuego();
             }
         };
@@ -85,21 +118,53 @@
         function drawWheel() {
             const arc = (2 * Math.PI) / options.length;
             for (let i = 0; i < options.length; i++) {
-                ctx.beginPath(); ctx.fillStyle = colors[i]; ctx.moveTo(150, 150);
-                ctx.arc(150, 150, 150, i * arc, (i + 1) * arc); ctx.fill();
-                ctx.save(); ctx.translate(150, 150); ctx.rotate(i * arc + arc / 2);
-                ctx.fillStyle = "white"; ctx.font = "bold 14px Arial"; ctx.textAlign = "right";
-                ctx.fillText(options[i], 140, 5); ctx.restore();
+                ctx.beginPath(); 
+                ctx.fillStyle = colors[i % colors.length]; 
+                ctx.moveTo(150, 150);
+                ctx.arc(150, 150, 150, i * arc, (i + 1) * arc); 
+                ctx.fill();
+                
+                ctx.save(); 
+                ctx.translate(150, 150); 
+                ctx.rotate(i * arc + arc / 2);
+                ctx.fillStyle = "white"; 
+                ctx.font = "bold 11px Arial"; 
+                ctx.textAlign = "right";
+                ctx.fillText(options[i], 140, 5); 
+                ctx.restore();
             }
         }
         drawWheel();
 
+        function lanzarConfeti() {
+            const duracion = 3 * 1000;
+            const fin = Date.now() + duracion;
+
+            (function frame() {
+                confetti({
+                    particleCount: 3,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#2980b9', '#27ae60', '#f1c40f']
+                });
+                confetti({
+                    particleCount: 3,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#2980b9', '#27ae60', '#f1c40f']
+                });
+
+                if (Date.now() < fin) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
         function validarRegistro() {
             const val = inputNombre.value.trim();
-            const tieneEspacio = val.includes(" ");
-            const longitudSuficiente = val.length > 5;
-
-            if (tieneEspacio && longitudSuficiente) {
+            if (val.includes(" ") && val.length > 5) {
                 nombreUsuario = val;
                 spinBtn.disabled = false;
                 spinBtn.style.background = "#27ae60";
@@ -120,41 +185,45 @@
             inputNombre.disabled = true;
             resultContainer.style.display = "none";
             
-            const randomSpin = Math.floor(Math.random() * 360) + 2160;
+            const randomSpin = Math.floor(Math.random() * 360) + 2880;
             currentRotation += randomSpin;
-            canvas.style.transition = "transform 4s cubic-bezier(0.15, 0, 0.15, 1)";
             canvas.style.transform = `rotate(${currentRotation}deg)`;
 
             setTimeout(() => {
                 isSpinning = false;
-                const index = Math.floor((360 - (currentRotation % 360) + 270) % 360 / (360 / options.length));
+                const actualDegrees = currentRotation % 360;
+                const arcSize = 360 / options.length;
+                const index = Math.floor((360 - actualDegrees) % 360 / arcSize);
                 const prize = options[index];
 
-                if (prize === "Intenta de nuevo") {
-                    winText.innerText = "¡Sigue intentando!";
-                    winDesc.innerText = descriptions[prize];
+                if (prize === "Vuelve a intentar") {
+                    winText.innerText = "¡Casi!";
+                    winDesc.innerHTML = descriptions[prize];
                     resultContainer.style.display = "block";
                     spinBtn.disabled = false;
                 } else {
-                    const finalCode = "LIS-" + Math.floor(1000 + Math.random() * 9000);
-                    
+                    const finalCode = "RUT-" + Math.floor(1000 + Math.random() * 9000);
+                    const premioConDetalle = descriptions[prize];
+
                     fetch(URL_SCRIPT, {
                         method: 'POST',
                         mode: 'no-cors',
-                        body: JSON.stringify({ nombre: nombreUsuario, premio: prize, codigo: finalCode })
+                        body: JSON.stringify({ nombre: nombreUsuario, premio: premioConDetalle, codigo: finalCode })
                     });
 
-                    localStorage.setItem('lis_prize_v2', prize);
-                    localStorage.setItem('lis_code_v2', finalCode);
+                    localStorage.setItem('lis_prize_v3', prize);
+                    localStorage.setItem('lis_code_v3', finalCode);
+                    
                     mostrarResultado(prize, finalCode);
                     desactivarJuego();
+                    lanzarConfeti(); // ¡Disparar confeti!
                 }
-            }, 4000);
+            }, 5000);
         }
 
         function mostrarResultado(prize, code) {
-            winText.innerText = "GANASTE: " + prize.toUpperCase();
-            winDesc.innerText = descriptions[prize];
+            winText.innerText = "🎉 ¡GANASTE " + prize.toUpperCase() + "!";
+            winDesc.innerHTML = descriptions[prize];
             codeDisplay.innerText = code;
             resultContainer.style.display = "block";
             regSection.style.display = "none";
@@ -163,7 +232,7 @@
         function desactivarJuego() {
             spinBtn.style.display = "none";
             canvas.style.opacity = "0.5";
-            bloqueoTexto.style.display = "block";
+            blockeoTexto.style.display = "block";
         }
     </script>
 </body>
