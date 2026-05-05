@@ -89,16 +89,16 @@
         ];
 
         const descriptions = {
-            "10 Cor": "Descuento de 10 Córdobas (Mín. C$300)",
-            "20 Cor": "Descuento de 20 Córdobas (Mín. C$450)",
-            "30 Cor": "Descuento de 30 Córdobas (Mín. C$600)",
-            "Chilaquil": "Chilaquil Gratis (Mín. C$500)",
-            "Crema": "Crema de regalo (Mín. C$500)",
-            "Perfume": "Perfume de regalo (Mín. C$450)",
-            "Auricular": "Auriculares de regalo (Mín. C$600)",
-            "Café": "Café de cortesía (Mín. C$300)",
+            "10 Cor": "Descuento de 10 Córdobas.<br>Aplica en compra mínima de C$300.",
+            "20 Cor": "Descuento de 20 Córdobas.<br>Aplica en compra mínima de C$450.",
+            "30 Cor": "Descuento de 30 Córdobas.<br>Aplica en compra mínima de C$600.",
+            "Chilaquil": "Chilaquil Gratis.<br>Aplica en compra mínima de C$500.",
+            "Crema": "Crema de regalo.<br>Aplica en compra mínima de C$500.",
+            "Perfume": "Perfume de regalo.<br>Aplica en compra mínima de C$450.",
+            "Auricular": "Auriculares de regalo.<br>Aplica en compra mínima de C$600.",
+            "Café": "Café de cortesía.<br>Aplica en compra mínima de C$300.",
             "Vuelve a intentar": "¡Casi! Tienes un giro extra.",
-            "Pato Punk": "Moto Pato Punk de regalo (Mín. C$650)"
+            "Pato Punk": "Moto Pato Punk de regalo.<br>Aplica en compra mínima de C$650 exclusivamente en artículos de moto."
         };
 
         const colors = ["#f1c40f", "#e67e22", "#9b59b6", "#3498db", "#2ecc71", "#1abc9c", "#e74c3c", "#d35400", "#7f8c8d", "#c0392b"];
@@ -203,7 +203,7 @@
                     spinBtn.disabled = false;
                 } else {
                     const finalCode = "RUT-" + Math.floor(1000 + Math.random() * 9000);
-                    const premioConDetalle = descriptions[prize];
+                    const premioConDetalle = descriptions[prize].replace("<br>", " ");
 
                     fetch(URL_SCRIPT, {
                         method: 'POST',
@@ -216,7 +216,7 @@
                     
                     mostrarResultado(prize, finalCode);
                     desactivarJuego();
-                    lanzarConfeti(); // ¡Disparar confeti!
+                    lanzarConfeti();
                 }
             }, 5000);
         }
